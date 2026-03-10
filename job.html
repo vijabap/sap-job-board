@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>SAP Job Details</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+</head>
+
+<body>
+
+<h1 id="title"></h1>
+
+<p id="company"></p>
+<p id="location"></p>
+<p id="salary"></p>
+
+<br>
+
+<a id="applyBtn">Apply Now</a>
+
+<script src="supabase.js"></script>
+
+<script>
+
+const params = new URLSearchParams(window.location.search)
+const jobId = params.get("id")
+
+async function loadJob(){
+
+const { data } = await supabase
+.from("jobs")
+.select("*")
+.eq("id", jobId)
+.single()
+
+document.getElementById("title").innerText = data.title
+document.getElementById("company").innerText = "Company: " + data.company
+document.getElementById("location").innerText = "Location: " + data.location
+document.getElementById("salary").innerText = "Salary: " + data.salary
+
+document.getElementById("applyBtn").href = "apply.html?id=" + jobId
+
+}
+
+loadJob()
+
+</script>
+
+</body>
+</html>

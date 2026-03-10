@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>SAP Jobs USA & Canada</title>
+</head>
+
+<body>
+
+<h1>SAP Jobs USA & Canada</h1>
+
+<div id="jobs"></div>
+
+<div id="applyForm" style="display:none">
+
+<h2>Apply for Job</h2>
+
+<input id="name" placeholder="Your Name"><br><br>
+
+<input id="email" placeholder="Email"><br><br>
+
+<input id="resume" type="file"><br><br>
+
+<button onclick="submitApplication()">Submit</button>
+
+</div>
+
+<script type="module">
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+
+const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI"
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+let selectedJob = ""
+
+async function loadJobs() {
+
+  const container = document.getElementById("jobs")
+  container.innerHTML = ""
+
+  const last48hrs = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .ilike("title", "%sap%")
+    .gte("created_at", last48hrs)
+    .order("created_at", { ascending: false })
+
+  if(error){
+    console.log(error)
+    container.innerHTML = "Error loading jobs"
+    return
+  }
+
+  if(!data || data.length === 0){
+    container.innerHTML = "No new SAP jobs in the last 48 hours."
+    return
+  }
+
+  data.forEach(job => {
+
+    const div = document.createElement("div")
+
+    div.innerHTML = `
+      <h3>
+        <a href="job.html?id=${job.id}">
+          ${job.title}
+        </a>
+      </h3>
+
+      <p><b>Company:</b> ${job.company}</p>
+      <p><b>Location:</b> ${job.location}</p>
+      <p><b>Salary:</b> ${job.salary || "Not specified"}</p>
+
+      <button onclick="showApplyForm('${job.title}')">
+        Apply
+      </button>
+
+      <hr>
+    `
+
+    container.appendChild(div)
+
+  })
+}
+
+loadJobs()
+
+window.showApplyForm = function(jobTitle){
+
+  selectedJob = jobTitle
+
+  document.getElementById("applyForm").style.display = "block"
+
+}
+
+window.submitApplication = async function(){
+
+  const name = document.getElementById("name").value
+  const email = document.getElementById("email").value
+  const file = document.getElementById("resume").files[0]
+
+  if(!file){
+    alert("Please upload resume")
+    return
+  }
+
+  const fileName = Date.now() + "-" + file.name
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from("resumes")
+      .upload(fileName, file)
+
+  if(uploadError){
+    alert("Resume upload failed")
+    return
+  }
+
+  const resumeUrl =
+    supabaseUrl + "/storage/v1/object/public/resumes/" + fileName
+
+  const { error } = await supabase
+    .from("applications")
+    .insert([
+      {
+        name: name,
+        email: email,
+        job: selectedJob,
+        resume_url: resumeUrl
+      }
+    ])
+
+  if(error){
+    alert("Error submitting application")
+  } else {
+    alert("Application submitted successfully!")
+    document.getElementById("applyForm").style.display = "none"
+  }
+
+}
+
+</script>
+
+</body>
+
+</html>
