@@ -21,7 +21,7 @@
 
 <input id="resume" type="file"><br><br>
 
-<button onclick="submitApplication()">Submit</button>
+<button onclick="submitApplication()">Submit Application</button>
 
 </div>
 
@@ -34,32 +34,16 @@ const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-let selectedJob = ""
+let selectedJobId = ""
+let selectedJobTitle = ""
 
-async function loadJobs() {
-
-  const container = document.getElementById("jobs")
-  container.innerHTML = ""
-
-  const last48hrs = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+async function loadJobs(){
 
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
-    .ilike("title", "%sap%")
-    .gte("created_at", last48hrs)
-    .order("created_at", { ascending: false })
 
-  if(error){
-    console.log(error)
-    container.innerHTML = "Error loading jobs"
-    return
-  }
-
-  if(!data || data.length === 0){
-    container.innerHTML = "No new SAP jobs in the last 48 hours."
-    return
-  }
+  const container = document.getElementById("jobs")
 
   data.forEach(job => {
 
@@ -72,11 +56,11 @@ async function loadJobs() {
         </a>
       </h3>
 
-      <p><b>Company:</b> ${job.company}</p>
-      <p><b>Location:</b> ${job.location}</p>
-      <p><b>Salary:</b> ${job.salary || "Not specified"}</p>
+      <p>Company: ${job.company}</p>
+      <p>Location: ${job.location}</p>
+      <p>Salary: ${job.salary}</p>
 
-      <button onclick="showApplyForm('${job.title}')">
+      <button onclick="showApplyForm('${job.id}','${job.title}')">
         Apply
       </button>
 
@@ -86,13 +70,15 @@ async function loadJobs() {
     container.appendChild(div)
 
   })
+
 }
 
 loadJobs()
 
-window.showApplyForm = function(jobTitle){
+window.showApplyForm = function(jobId,jobTitle){
 
-  selectedJob = jobTitle
+  selectedJobId = jobId
+  selectedJobTitle = jobTitle
 
   document.getElementById("applyForm").style.display = "block"
 
@@ -104,17 +90,12 @@ window.submitApplication = async function(){
   const email = document.getElementById("email").value
   const file = document.getElementById("resume").files[0]
 
-  if(!file){
-    alert("Please upload resume")
-    return
-  }
-
   const fileName = Date.now() + "-" + file.name
 
   const { error: uploadError } =
     await supabase.storage
       .from("resumes")
-      .upload(fileName, file)
+      .upload(fileName,file)
 
   if(uploadError){
     alert("Resume upload failed")
@@ -128,18 +109,19 @@ window.submitApplication = async function(){
     .from("applications")
     .insert([
       {
-        name: name,
-        email: email,
-        job: selectedJob,
-        resume_url: resumeUrl
+        name:name,
+        email:email,
+        job_id:selectedJobId,
+        job_title:selectedJobTitle,
+        resume_url:resumeUrl
       }
     ])
 
   if(error){
     alert("Error submitting application")
-  } else {
+  }
+  else{
     alert("Application submitted successfully!")
-    document.getElementById("applyForm").style.display = "none"
   }
 
 }
