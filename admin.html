@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Admin Dashboard</title>
+</head>
+
+<body>
+
+<h1>Job Applications</h1>
+
+<table border="1" cellpadding="10">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Email</th>
+<th>Job Title</th>
+<th>Resume</th>
+<th>Date</th>
+</tr>
+</thead>
+
+<tbody id="applicationsTable">
+</tbody>
+
+</table>
+
+
+<script type="module">
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+
+const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI"
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+async function loadApplications(){
+
+const { data, error } = await supabase
+.from("applications")
+.select("*")
+.order("created_at",{ascending:false})
+
+const table = document.getElementById("applicationsTable")
+
+data.forEach(app => {
+
+const row = document.createElement("tr")
+
+row.innerHTML = `
+<td>${app.name}</td>
+<td>${app.email}</td>
+<td>${app.job_title}</td>
+<td><a href="${app.resume_url}" target="_blank">Download</a></td>
+<td>${app.created_at}</td>
+`
+
+table.appendChild(row)
+
+})
+
+}
+
+loadApplications()
+
+</script>
+
+</body>
+
+</html>
