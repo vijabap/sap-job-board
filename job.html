@@ -1,11 +1,8 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-
-<title>SAP Job Details</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
+  <title>Job Details</title>
 </head>
 
 <body>
@@ -15,38 +12,106 @@
 <p id="company"></p>
 <p id="location"></p>
 <p id="salary"></p>
+<p id="description"></p>
 
-<br>
+<button onclick="showApplyForm()">Apply for this Job</button>
 
-<a id="applyBtn">Apply Now</a>
+<hr>
 
-<script src="supabase.js"></script>
+<div id="applyForm" style="display:none">
 
-<script>
+<h2>Apply for this Job</h2>
+
+<input id="name" placeholder="Your Name"><br><br>
+
+<input id="email" placeholder="Email"><br><br>
+
+<input id="resume" type="file"><br><br>
+
+<button onclick="submitApplication()">Submit Application</button>
+
+</div>
+
+
+<script type="module">
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+
+const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI"
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 const params = new URLSearchParams(window.location.search)
 const jobId = params.get("id")
 
 async function loadJob(){
 
-const { data } = await supabase
-.from("jobs")
-.select("*")
-.eq("id", jobId)
-.single()
+  const { data } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .single()
 
-document.getElementById("title").innerText = data.title
-document.getElementById("company").innerText = "Company: " + data.company
-document.getElementById("location").innerText = "Location: " + data.location
-document.getElementById("salary").innerText = "Salary: " + data.salary
-
-document.getElementById("applyBtn").href = "apply.html?id=" + jobId
+  document.getElementById("title").innerText = data.title
+  document.getElementById("company").innerText = "Company: " + data.company
+  document.getElementById("location").innerText = "Location: " + data.location
+  document.getElementById("salary").innerText = "Salary: " + data.salary
+  document.getElementById("description").innerText = data.description
 
 }
 
 loadJob()
 
+window.showApplyForm = function(){
+
+  document.getElementById("applyForm").style.display = "block"
+
+}
+
+
+window.submitApplication = async function(){
+
+  const name = document.getElementById("name").value
+  const email = document.getElementById("email").value
+  const file = document.getElementById("resume").files[0]
+
+  const fileName = Date.now() + "-" + file.name
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from("resumes")
+      .upload(fileName, file)
+
+  if(uploadError){
+    alert("Resume upload failed")
+    return
+  }
+
+  const resumeUrl =
+    supabaseUrl + "/storage/v1/object/public/resumes/" + fileName
+
+  const { error } = await supabase
+    .from("applications")
+    .insert([
+      {
+        name: name,
+        email: email,
+        job_id: jobId,
+        resume_url: resumeUrl
+      }
+    ])
+
+  if(error){
+    alert("Error submitting application")
+  } else {
+    alert("Application submitted successfully!")
+  }
+
+}
+
 </script>
 
 </body>
+
 </html>
