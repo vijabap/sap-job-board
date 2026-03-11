@@ -12,7 +12,7 @@
 <p id="company"></p>
 <p id="location"></p>
 <p id="salary"></p>
-<p id="description"></p>
+<p id="link"></p>
 
 <button onclick="showApplyForm()">Apply for this Job</button>
 
@@ -32,7 +32,6 @@
 
 </div>
 
-
 <script type="module">
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
@@ -45,19 +44,32 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 const params = new URLSearchParams(window.location.search)
 const jobId = params.get("id")
 
+let jobTitle = ""
+
 async function loadJob(){
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("jobs")
     .select("*")
     .eq("id", jobId)
     .single()
 
+  if(error){
+    console.log(error)
+    return
+  }
+
+  jobTitle = data.title
+
   document.getElementById("title").innerText = data.title
   document.getElementById("company").innerText = "Company: " + data.company
   document.getElementById("location").innerText = "Location: " + data.location
   document.getElementById("salary").innerText = "Salary: " + data.salary
-  document.getElementById("description").innerText = data.description ? data.description : ""
+
+  if(data.link){
+    document.getElementById("link").innerHTML =
+      `<a href="${data.link}" target="_blank">Original Job Posting</a>`
+  }
 
 }
 
@@ -69,12 +81,16 @@ window.showApplyForm = function(){
 
 }
 
-
 window.submitApplication = async function(){
 
   const name = document.getElementById("name").value
   const email = document.getElementById("email").value
   const file = document.getElementById("resume").files[0]
+
+  if(!file){
+    alert("Please upload your resume")
+    return
+  }
 
   const fileName = Date.now() + "-" + file.name
 
@@ -98,13 +114,15 @@ window.submitApplication = async function(){
         name: name,
         email: email,
         job_id: jobId,
+        job_title: jobTitle,
         resume_url: resumeUrl
       }
     ])
 
   if(error){
     alert("Error submitting application")
-  } else {
+  } 
+  else{
     alert("Application submitted successfully!")
   }
 
