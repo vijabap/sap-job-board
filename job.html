@@ -4,60 +4,93 @@
   <title>Job Details</title>
 </head>
 <body>
+
 <h1 id="title"></h1>
 <p id="company"></p>
 <p id="location"></p>
 <p id="salary"></p>
 <p id="description"></p>
-<button onclick="showApplyForm()">Apply</button>
 
-<div id="applyForm" style="display:none">
-  <input id="name" placeholder="Your Name">
-  <input id="email" placeholder="Email">
-  <input id="resume" type="file">
-  <button onclick="submitApplication()">Submit Application</button>
-</div>
+<hr>
+
+<h2>Apply for this Job</h2>
+<input id="name" placeholder="Your Name"><br><br>
+<input id="email" placeholder="Email"><br><br>
+<input id="resume" type="file"><br><br>
+<button onclick="submitApplication()">Submit Application</button>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+// --- REPLACE WITH YOUR SUPABASE URL & KEY ---
 const SUPABASE_URL = "https://ppgzcywiodxuuxysbnzl.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI
-";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI";
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const jobId = new URLSearchParams(window.location.search).get("id");
 let selectedJob = null;
 
-async function loadJob(){
-  const { data } = await supabase.from("jobs").select("*").eq("id", jobId).single();
+async function loadJob() {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .single();
+
+  if(error){ console.error(error); return; }
+
   selectedJob = data;
+
   document.getElementById("title").innerText = data.title;
-  document.getElementById("company").innerText = data.company;
-  document.getElementById("location").innerText = data.location;
-  document.getElementById("salary").innerText = data.salary || "";
+  document.getElementById("company").innerText = "Company: " + data.company;
+  document.getElementById("location").innerText = "Location: " + data.location;
+  document.getElementById("salary").innerText = "Salary: " + (data.salary || "");
   document.getElementById("description").innerText = data.description || "";
 }
+
 loadJob();
 
-window.showApplyForm = function(){ document.getElementById("applyForm").style.display = "block"; }
-
-window.submitApplication = async function(){
+window.submitApplication = async function() {
   const name = document.getElementById("name").value;
   const email = document.getElementById("email").value;
   const file = document.getElementById("resume").files[0];
+
+  if(!name || !email || !file) {
+    return alert("All fields are required");
+  }
+
   const fileName = Date.now() + "-" + file.name;
 
-  const { error: uploadError } = await supabase.storage.from("resumes").upload(fileName, file);
-  if(uploadError){ alert("Resume upload failed"); return; }
+  const { error: uploadError } = await supabase.storage
+    .from("resumes")
+    .upload(fileName, file);
+
+  if(uploadError){
+    alert("Resume upload failed");
+    return;
+  }
 
   const resumeUrl = SUPABASE_URL + "/storage/v1/object/public/resumes/" + fileName;
-  const { error } = await supabase.from("applications").insert([{
-    name, email, job_id: selectedJob.id, job_title: selectedJob.title, resume_url: resumeUrl
-  }]);
 
-  if(error){ alert("Error submitting application"); console.error(error); }
-  else{ alert("Application submitted successfully!"); }
+  const { error } = await supabase
+    .from("applications")
+    .insert([{
+      name,
+      email,
+      job_id: selectedJob.id,
+      job_title: selectedJob.title,
+      resume_url: resumeUrl
+    }]);
+
+  if(error){
+    alert("Error submitting application");
+    console.error(error);
+  } else {
+    alert("Application submitted successfully!");
+  }
 }
 </script>
+
 </body>
 </html>
