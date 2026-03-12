@@ -15,9 +15,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Replace these with your actual SAP job APIs
 const JOB_SOURCES = [
-https://www.indeed.com/rss?q=SAP&l=Canada,
-  https://www.indeed.com/rss?q=SAP&l=United+States,
-  https://www.indeed.com/rss?q=SAP&l=Remote
+"https://www.indeed.com/rss?q=SAP&l=Canada",
+  "https://www.indeed.com/rss?q=SAP&l=USA",
+  "https://www.indeed.com/rss?q=SAP&l=united+states",
+  "https://www.indeed.com/rss?q=SAP&l=Remote"
 ];
 
 async function importJobs() {
