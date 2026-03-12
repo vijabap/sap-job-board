@@ -10,7 +10,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- CONFIG ---
 const JOB_SOURCES = [
-  "https://example-sap-jobs-api.com/jobs" // replace with your actual SAP jobs source(s)
+  "https://www.indeed.com/rss?q=SAP&l=United+States",
+  "https://www.indeed.com/rss?q=SAP&l=Canada",
+  "https://www.indeed.com/rss?q=SAP&l=Remote",
+  "https://www.juju.com/jobs-q-sap-l-canada.rss",
+  "https://www.juju.com/jobs-q-sap-l-united-states.rss",
+  "https://www.juju.com/jobs-q-sap-l-remote.rss"
 ];
 
 // Fetch jobs from API
