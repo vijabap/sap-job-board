@@ -2,23 +2,24 @@ name: Import SAP Jobs
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # Every 6 hours
-  workflow_dispatch:        # Manual trigger option
+    - cron: "0 */6 * * *"   # every 6 hours
+  workflow_dispatch:        # manual run
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   import:
     runs-on: ubuntu-latest
 
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 24
+      - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -28,3 +29,6 @@ jobs:
 
       - name: Run SAP Job Importer
         run: node importJobs.js
+        env:
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
