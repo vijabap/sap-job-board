@@ -1,40 +1,78 @@
-import fetch from "node-fetch"
-import { createClient } from "@supabase/supabase-js"
+// importJobs.js
+import fetch from "node-fetch";
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
-const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_KEY)
+// Use environment variables for security
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-export async function importJobs(){
+// --- CONFIG ---
+const JOB_SOURCES = [
+  "https://example-sap-jobs-api.com/jobs" // replace with your actual SAP jobs source(s)
+];
 
-const url =
-"https://remotive.com/api/remote-jobs?search=SAP"
+// Fetch jobs from API
+async function fetchJobs() {
+  let allJobs = [];
 
-const response = await fetch(url)
+  for (const url of JOB_SOURCES) {
+    const res = await fetch(url);
+    const data = await res.json();
+    allJobs = allJobs.concat(data.jobs);
+  }
 
-const jobs = await response.json()
+  // Filter for SAP jobs and last 48 hours
+  const now = Date.now();
+  const twoDaysAgo = now - 48 * 60 * 60 * 1000;
 
-for(const job of jobs.jobs){
-
-const title = job.title || ""
-
-if(!title.toLowerCase().includes("sap")) continue
-
-await supabase
-.from("jobs")
-.insert({
-title: job.title,
-company: job.company_name,
-location: job.candidate_required_location,
-salary: job.salary || "",
-link: job.url
-})
-
+  return allJobs.filter(job => 
+    job.title.toLowerCase().includes("sap") &&
+    new Date(job.posted_at).getTime() > twoDaysAgo
+  );
 }
 
-console.log("Jobs imported")
+// Insert jobs into Supabase
+async function insertJobs(jobs) {
+  for (const job of jobs) {
+    // Skip duplicates based on unique job link
+    const { data: existing } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("link", job.link)
+      .limit(1)
+      .single()
+      .catch(() => ({ data: null }));
 
+    if (existing) continue;
+
+    await supabase
+      .from("jobs")
+      .insert([
+        {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary || "",
+          link: job.link,
+          description: job.description || ""
+        }
+      ])
+      .catch(err => console.error("Error inserting job:", err));
+  }
 }
 
-importJobs()
+export async function importJobs() {
+  console.log("Fetching jobs...");
+  const jobs = await fetchJobs();
+  console.log(`Found ${jobs.length} SAP jobs`);
+
+  await insertJobs(jobs);
+  console.log("Job import complete!");
+}
+
+// If run directly with Node
+if (import.meta.url === `file://${process.argv[1]}`) {
+  importJobs();
+}
