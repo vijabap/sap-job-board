@@ -1,0 +1,23 @@
+name: Import SAP Jobs
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - run: npm install node-fetch @supabase/supabase-js
+
+      - run: node importJobs.js
+        env:
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
