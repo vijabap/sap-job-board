@@ -2,7 +2,7 @@ import fetch from "node-fetch"
 import { createClient } from "@supabase/supabase-js"
 
 const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
-const supabaseKey = process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI
+const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_KEY)
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
