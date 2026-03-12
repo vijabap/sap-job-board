@@ -1,133 +1,99 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>SAP Jobs USA & Canada</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .job { border-bottom: 1px solid #ccc; padding: 10px; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background:#fff; margin:10% auto; padding:20px; width:90%; max-width:500px; }
+    .close { float:right; cursor:pointer; font-size:20px; }
+    input, button { width:100%; margin:5px 0; padding:8px; }
+  </style>
 </head>
-
 <body>
-
 <h1>SAP Jobs USA & Canada</h1>
-
 <div id="jobs"></div>
 
-<div id="applyForm" style="display:none">
-
-<h2>Apply for Job</h2>
-
-<input id="name" placeholder="Your Name"><br><br>
-
-<input id="email" placeholder="Email"><br><br>
-
-<input id="resume" type="file"><br><br>
-
-<button onclick="submitApplication()">Submit Application</button>
-
+<!-- Modal for Job Details + Apply -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h2 id="modalTitle"></h2>
+    <p id="modalCompany"></p>
+    <p id="modalLocation"></p>
+    <p id="modalSalary"></p>
+    <p id="modalDescription"></p>
+    <hr>
+    <h3>Apply for this job</h3>
+    <input id="name" placeholder="Your Name">
+    <input id="email" placeholder="Email">
+    <input id="resume" type="file">
+    <button onclick="submitApplication()">Submit Application</button>
+  </div>
 </div>
 
 <script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
+// --- REPLACE WITH YOUR SUPABASE URL & KEY ---
+const SUPABASE_URL = "https://ppgzcywiodxuuxysbnzl.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI"
+let selectedJob = null;
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+async function loadJobs() {
+  const { data, error } = await supabase.from("jobs").select("*").order("created_at", { ascending: false });
+  if(error){ console.error(error); return; }
 
-let selectedJobId = ""
-let selectedJobTitle = ""
-
-async function loadJobs(){
-
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("*")
-
-  const container = document.getElementById("jobs")
-
+  const container = document.getElementById("jobs");
   data.forEach(job => {
-
-    const div = document.createElement("div")
-
-    div.innerHTML = `
-      <h3>
-        <a href="job.html?id=${job.id}">
-          ${job.title}
-        </a>
-      </h3>
-
-      <p>Company: ${job.company}</p>
-      <p>Location: ${job.location}</p>
-      <p>Salary: ${job.salary}</p>
-
-      <button onclick="showApplyForm('${job.id}','${job.title}')">
-        Apply
-      </button>
-
-      <hr>
-    `
-
-    container.appendChild(div)
-
-  })
-
+    const div = document.createElement("div");
+    div.className = "job";
+    div.innerHTML = `<strong>${job.title}</strong> - ${job.company} <button onclick="showModal('${job.id}')">Details / Apply</button>`;
+    container.appendChild(div);
+  });
 }
 
-loadJobs()
+async function showModal(jobId) {
+  const { data } = await supabase.from("jobs").select("*").eq("id", jobId).single();
+  selectedJob = data;
 
-window.showApplyForm = function(jobId,jobTitle){
+  document.getElementById("modalTitle").innerText = data.title;
+  document.getElementById("modalCompany").innerText = "Company: " + data.company;
+  document.getElementById("modalLocation").innerText = "Location: " + data.location;
+  document.getElementById("modalSalary").innerText = "Salary: " + (data.salary || "");
+  document.getElementById("modalDescription").innerText = data.description || "";
+  document.getElementById("modal").style.display = "block";
+}
 
-  selectedJobId = jobId
-  selectedJobTitle = jobTitle
-
-  document.getElementById("applyForm").style.display = "block"
-
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
 }
 
 window.submitApplication = async function(){
+  if(!selectedJob) return alert("No job selected");
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const file = document.getElementById("resume").files[0];
+  if(!name || !email || !file) return alert("All fields are required");
 
-  const name = document.getElementById("name").value
-  const email = document.getElementById("email").value
-  const file = document.getElementById("resume").files[0]
+  const fileName = Date.now() + "-" + file.name;
+  const { error: uploadError } = await supabase.storage.from("resumes").upload(fileName, file);
+  if(uploadError){ alert("Resume upload failed"); return; }
 
-  const fileName = Date.now() + "-" + file.name
+  const resumeUrl = SUPABASE_URL + "/storage/v1/object/public/resumes/" + fileName;
+  const { error } = await supabase.from("applications").insert([{
+    name, email, job_id: selectedJob.id, job_title: selectedJob.title, resume_url: resumeUrl
+  }]);
 
-  const { error: uploadError } =
-    await supabase.storage
-      .from("resumes")
-      .upload(fileName,file)
-
-  if(uploadError){
-    alert("Resume upload failed")
-    return
-  }
-
-  const resumeUrl =
-    supabaseUrl + "/storage/v1/object/public/resumes/" + fileName
-
-  const { error } = await supabase
-    .from("applications")
-    .insert([
-      {
-        name:name,
-        email:email,
-        job_id:selectedJobId,
-        job_title:selectedJobTitle,
-        resume_url:resumeUrl
-      }
-    ])
-
-  if(error){
-    alert("Error submitting application")
-  }
-  else{
-    alert("Application submitted successfully!")
-  }
-
+  if(error){ alert("Error submitting application"); console.error(error); }
+  else{ alert("Application submitted successfully!"); closeModal(); }
 }
 
+loadJobs();
 </script>
-
 </body>
-
 </html>
