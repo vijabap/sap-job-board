@@ -1,89 +1,60 @@
-const Parser = require("rss-parser");
-const { createClient } = require("@supabase/supabase-js");
+import fetch from "node-fetch";
+import { createClient } from "@supabase/supabase-js";
 
-const parser = new Parser();
+// --- REPLACE THESE WITH YOUR SUPABASE PROJECT INFO ---
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-// Read GitHub secrets
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing SUPABASE_URL or SUPABASE_KEY");
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// RSS job sources
+// --- REPLACE THIS WITH YOUR SAP JOB FEED / API URLS ---
 const JOB_SOURCES = [
-  "https://www.indeed.com/rss?q=SAP&l=Canada",
-  "https://www.indeed.com/rss?q=SAP&l=United+States",
-  "https://www.indeed.com/rss?q=SAP&l=Remote"
+  https://www.indeed.com/rss?q=SAP&l=Canada,
+  https://www.indeed.com/rss?q=SAP&l=United+States,
+  https://www.indeed.com/rss?q=SAP&l=Remote
 ];
 
-async function fetchJobs() {
-  let jobs = [];
+export async function importJobs() {
+  const now = new Date();
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
   for (const url of JOB_SOURCES) {
-    try {
-      const feed = await parser.parseURL(url);
+    const res = await fetch(url);
+    const text = await res.text();
 
-      feed.items.forEach(item => {
-        jobs.push({
-          title: item.title || "",
-          company: item.creator || "Unknown",
-          location: "",
-          salary: "",
-          link: item.link || "",
-          description: item.contentSnippet || ""
-        });
-      });
+    // simple RSS parsing (you can improve with rss-parser library)
+    const items = text.match(/<item>([\s\S]*?)<\/item>/gi) || [];
 
-    } catch (err) {
-      console.log("Feed error:", err.message);
+    for (const itemRaw of items) {
+      const titleMatch = itemRaw.match(/<title>(.*?)<\/title>/i);
+      const linkMatch = itemRaw.match(/<link>(.*?)<\/link>/i);
+      const dateMatch = itemRaw.match(/<pubDate>(.*?)<\/pubDate>/i);
+      const descMatch = itemRaw.match(/<description>(.*?)<\/description>/i);
+
+      const pubDate = dateMatch ? new Date(dateMatch[1]) : now;
+      if (pubDate < twoDaysAgo) continue; // skip old jobs
+
+      const job = {
+        title: titleMatch ? titleMatch[1] : "No Title",
+        company: "SAP",  // or parse company if available
+        location: "US/Canada/Remote", // parse if available
+        salary: "",       // parse if available
+        link: linkMatch ? linkMatch[1] : "",
+        description: descMatch ? descMatch[1] : "",
+        created_at: pubDate.toISOString()
+      };
+
+      // Insert into Supabase
+      const { error } = await supabase.from("jobs").insert([job]);
+      if (error) console.error("Error inserting job:", error);
     }
   }
 
-  return jobs;
+  // Optional: delete old jobs >72 hours
+  await supabase
+    .from("jobs")
+    .delete()
+    .lt("created_at", new Date(Date.now() - 72*60*60*1000).toISOString());
+
+  console.log("SAP jobs import completed!");
 }
-
-async function insertJobs(jobs) {
-  for (const job of jobs) {
-
-    if (!job.link) continue;
-
-    // check duplicates
-    const { data } = await supabase
-      .from("jobs")
-      .select("id")
-      .eq("link", job.link)
-      .limit(1);
-
-    if (data && data.length > 0) continue;
-
-    const { error } = await supabase
-      .from("jobs")
-      .insert([job]);
-
-    if (error) {
-      console.log("Insert error:", error.message);
-    } else {
-      console.log("Inserted:", job.title);
-    }
-  }
-}
-
-async function run() {
-
-  console.log("Fetching SAP jobs...");
-
-  const jobs = await fetchJobs();
-
-  console.log(`Found ${jobs.length} jobs`);
-
-  await insertJobs(jobs);
-
-  console.log("Import finished");
-}
-
-run();
