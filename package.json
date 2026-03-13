@@ -1,22 +1,17 @@
 {
-  "name": "nodejs",
+  "name": "sap-job-board",
   "version": "1.0.0",
-  "description": "",
+  "description": "SAP Job Board Importer",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.98.0",
-    "@types/node": "^22.13.11",
-    "express": "^5.2.1",
+    "@supabase/supabase-js": "^2.99.0",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
-    "rss-parser": "^3.12.0"
+    "rss-parser": "^3.12.0",
+    "express": "^5.2.1"
   }
 }
