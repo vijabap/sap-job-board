@@ -1,78 +1,75 @@
 // importJobs.js
-const fetch = require("node-fetch");
-const { createClient } = require("@supabase/supabase-js");
+import fetch from "node-fetch";
+import Parser from "rss-parser"; // npm install rss-parser
+import { createClient } from "@supabase/supabase-js";
 
-// Pull from environment variables set in GitHub Actions
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error("ERROR: Missing SUPABASE_URL or SUPABASE_KEY in environment");
-  process.exit(1);
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const parser = new Parser();
 
-// Replace these with your actual SAP job APIs
+// Job RSS sources
 const JOB_SOURCES = [
-"https://www.indeed.com/rss?q=SAP&l=Canada",
+  "https://www.indeed.com/rss?q=SAP&l=Canada",
   "https://www.indeed.com/rss?q=SAP&l=USA",
-  "https://www.indeed.com/rss?q=SAP&l=united+states",
+  "https://www.indeed.com/rss?q=SAP&l=United+States",
   "https://www.indeed.com/rss?q=SAP&l=Remote"
 ];
 
-async function importJobs() {
-  try {
-    for (const url of JOB_SOURCES) {
-      let jobs = [];
-      try {
-        const response = await fetch(url);
-        jobs = await response.json();
-      } catch (err) {
-        console.error(`Failed to fetch jobs from ${url}:`, err);
-        continue;
-      }
+// Helper: Check if job is within last 48 hours
+function isRecent(pubDate) {
+  const jobDate = new Date(pubDate);
+  const now = new Date();
+  const diffHours = (now - jobDate) / 36e5; // ms to hours
+  return diffHours <= 48;
+}
 
-      for (const job of jobs) {
-        try {
-          // Only SAP jobs
-          if (!/SAP/i.test(job.title)) continue;
+export async function importJobs() {
+  for (const url of JOB_SOURCES) {
+    console.log("Fetching jobs from:", url);
 
-          // Only last 48 hours
-          const postedDate = new Date(job.posted_at || job.date_posted || new Date());
-          const now = new Date();
-          const diffHours = (now - postedDate) / (1000 * 60 * 60);
-          if (diffHours > 48) continue;
+    try {
+      const feed = await parser.parseURL(url);
 
-          // Upsert job into Supabase
-          const { error } = await supabase
-            .from("jobs")
-            .upsert([{
-              id: job.id,
-              title: job.title,
-              company: job.company || "",
-              location: job.location || "",
-              salary: job.salary || "",
-              description: job.description || "",
-              link: job.link || ""
-            }], { onConflict: ["id"] });
+      for (const item of feed.items) {
+        // Filter: Only SAP jobs & recent
+        if (!item.title.toLowerCase().includes("sap")) continue;
+        if (!isRecent(item.pubDate)) continue;
 
-          if (error) console.error("Supabase insert error:", error);
+        // Extract details
+        const job = {
+          title: item.title,
+          company: item.creator || item.author || "",
+          location: item.contentSnippet || "", // RSS may not have structured location
+          link: item.link,
+          description: item.content || "",
+          created_at: new Date().toISOString()
+        };
 
-        } catch (err) {
-          console.error("Error processing job:", job, err);
+        // Insert into Supabase (avoid duplicates by title + link)
+        const { data: existing } = await supabase
+          .from("jobs")
+          .select("id")
+          .eq("title", job.title)
+          .eq("link", job.link);
+
+        if (!existing.length) {
+          const { error } = await supabase.from("jobs").insert([job]);
+          if (error) console.error("Insert error:", error);
+          else console.log("Job added:", job.title);
+        } else {
+          console.log("Job already exists:", job.title);
         }
       }
+    } catch (err) {
+      console.error("Error fetching/parsing:", err);
     }
-    console.log("✅ Job import completed successfully.");
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    process.exit(1);
   }
 }
 
-// Run immediately
-importJobs().catch(err => {
-  console.error("ImportJobs failed:", err);
-  process.exit(1);
-});
+// If run directly
+if (require.main === module) {
+  importJobs().catch(err => console.error(err));
+}
