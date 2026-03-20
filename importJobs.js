@@ -29,10 +29,11 @@ async function importJobs() {
     console.log("Old jobs deleted");
 
     // 2️⃣ Filter SAP jobs + US/Canada/Remote
-  const filteredJobs = jobs.filter(job =>
-  job.title.toLowerCase().includes("sap") ||
-  job.description.toLowerCase().includes("sap")
-);
+const keywords = ["sap", "fico", "abap", "hana", "mm", "sd"];
+const filteredJobs = jobs.filter(job => {
+  const text = (job.title + " " + job.description).toLowerCase();
+  return keywords.some(k => text.includes(k));
+});
 
     console.log(`Filtered ${filteredJobs.length} SAP jobs`);
     console.log(filteredJobs.slice(0, 3));
