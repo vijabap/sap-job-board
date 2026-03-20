@@ -30,7 +30,9 @@ async function importJobs() {
 
     // 2️⃣ Filter SAP jobs + US/Canada/Remote
     const filteredJobs = jobs.filter(job =>
-      job.title.toLowerCase().includes("sap") &&
+  job.title.toLowerCase().includes("sap") ||
+  job.description.toLowerCase().includes("sap")
+); &&
       (
         job.candidate_required_location?.toLowerCase().includes("usa") ||
         job.candidate_required_location?.toLowerCase().includes("canada") ||
