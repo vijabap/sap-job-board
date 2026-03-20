@@ -46,7 +46,7 @@ async function loadJob() {
   document.getElementById("company").innerText = "Company: " + data.company;
   document.getElementById("location").innerText = "Location: " + data.location;
   document.getElementById("salary").innerText = "Salary: " + (data.salary || "");
-  document.getElementById("description").innerText = data.description || "";
+  document.getElementById("description").innerHTML = data.description || "";
 }
 
 loadJob();
