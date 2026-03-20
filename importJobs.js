@@ -29,15 +29,11 @@ async function importJobs() {
     console.log("Old jobs deleted");
 
     // 2️⃣ Filter SAP jobs + US/Canada/Remote
-    const filteredJobs = jobs.filter(job =>
+  const filteredJobs = jobs.filter(job =>
   job.title.toLowerCase().includes("sap") ||
   job.description.toLowerCase().includes("sap")
 ); &&
-      (
-        job.candidate_required_location?.toLowerCase().includes("usa") ||
-        job.candidate_required_location?.toLowerCase().includes("canada") ||
-        job.candidate_required_location?.toLowerCase().includes("worldwide")
-      )
+      true
     );
 
     console.log(`Filtered ${filteredJobs.length} SAP jobs`);
