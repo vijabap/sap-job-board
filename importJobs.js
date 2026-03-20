@@ -1,60 +1,69 @@
-import Parser from "rss-parser";
 import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase credentials from GitHub secrets
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// FREE working API (no blocking)
+const API_URL = "https://remotive.com/api/remote-jobs";
 
-const JOB_SOURCES = [
-  "https://www.indeed.com/rss?q=SAP&l=USA",
-  "https://www.indeed.com/rss?q=SAP&l=United+States",
-  "https://www.indeed.com/rss?q=SAP&l=Canada",
-  "https://www.indeed.com/rss?q=SAP&l=Remote"
-];
-
-const parser = new Parser();
-
-export async function importJobs() {
+async function importJobs() {
   try {
-    for (const feedUrl of JOB_SOURCES) {
-      const feed = await parser.parseURL(feedUrl);
-      for (const item of feed.items) {
+    console.log("Fetching jobs...");
 
-        // Optional: filter out old jobs, e.g., last 48 hours
-        const pubDate = new Date(item.pubDate);
-        const now = new Date();
-        const hoursDiff = (now - pubDate) / (1000 * 60 * 60);
-        if (hoursDiff > 48) continue;
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
-        const job = {
-          title: item.title,
-          company: item.creator || "N/A",
-          location: item.categories ? item.categories.join(", ") : "N/A",
-          description: item.contentSnippet || "",
-          link: item.link,
-          salary: "", // can fill if available
+    const jobs = data.jobs;
+
+    // 1️⃣ Delete jobs older than 48 hours
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+    await supabase
+      .from("jobs")
+      .delete()
+      .lt("created_at", cutoff);
+
+    console.log("Old jobs deleted");
+
+    // 2️⃣ Filter SAP jobs + US/Canada/Remote
+    const filteredJobs = jobs.filter(job =>
+      job.title.toLowerCase().includes("sap") &&
+      (
+        job.candidate_required_location?.toLowerCase().includes("usa") ||
+        job.candidate_required_location?.toLowerCase().includes("canada") ||
+        job.candidate_required_location?.toLowerCase().includes("worldwide")
+      )
+    );
+
+    console.log(`Filtered ${filteredJobs.length} SAP jobs`);
+
+    // 3️⃣ Insert into Supabase
+    for (const job of filteredJobs) {
+      const { error } = await supabase
+        .from("jobs")
+        .upsert({
+          id: job.id.toString(),
+          title: job.title,
+          company: job.company_name,
+          location: job.candidate_required_location,
+          salary: job.salary || "",
+          description: job.description,
+          link: job.url,
           created_at: new Date().toISOString()
-        };
+        });
 
-        // Insert into Supabase
-        const { error } = await supabase
-          .from("jobs")
-          .upsert(job, { onConflict: ["title", "company", "link"] });
-
-        if (error) console.error("Supabase insert error:", error);
-      }
+      if (error) console.error("Insert error:", error);
     }
-    console.log("SAP Jobs import completed successfully!");
+
+    console.log("✅ Jobs imported successfully");
+
   } catch (err) {
-    console.error("Error importing SAP jobs:", err);
-    throw err;
+    console.error("❌ Import failed:", err);
+    process.exit(1);
   }
 }
 
-// Run immediately if called directly
-if (process.argv[1].endsWith("importJobs.js")) {
-  importJobs();
-}
+importJobs();
