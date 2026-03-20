@@ -32,9 +32,7 @@ async function importJobs() {
   const filteredJobs = jobs.filter(job =>
   job.title.toLowerCase().includes("sap") ||
   job.description.toLowerCase().includes("sap")
-); &&
-      true
-    );
+);
 
     console.log(`Filtered ${filteredJobs.length} SAP jobs`);
     console.log(filteredJobs.slice(0, 3));
