@@ -39,6 +39,7 @@ async function importJobs() {
     );
 
     console.log(`Filtered ${filteredJobs.length} SAP jobs`);
+    console.log(filteredJobs.slice(0, 3));
 
     // 3️⃣ Insert into Supabase
     for (const job of filteredJobs) {
