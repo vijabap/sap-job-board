@@ -7,12 +7,14 @@ const supabase = createClient(
 );
 
 // FREE working API (no blocking)
-const ADZUNA_URL = `https://api.adzuna.com/v1/api/jobs/us/search/2?app_id=e83ceaab&app_key=47986b777fc5b5b7f267cf3432f90815&what=SAP&what_or=SAP&title_only=SAP&max_days_old=7`;
+const API_URL = "https://remotive.com/api/remote-jobs";
 
-const res = await fetch(ADZUNA_URL);
-const data = await res.json();
+async function importJobs() {
+  try {
+    console.log("Fetching jobs...");
 
-const jobs = data.results;
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
     const jobs = data.jobs;
 
