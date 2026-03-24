@@ -136,6 +136,8 @@ async function importJobs() {
     process.exit(1);
   }
 }
-
+console.log("Adzuna raw jobs:", jobs.length);
+console.log("Remotive raw jobs:", jobs.length);
+console.log("Final jobs to insert:", uniqueJobs.length);
 // Run
 importJobs();
