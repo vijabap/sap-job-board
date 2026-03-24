@@ -21,7 +21,7 @@ const KEYWORDS = [
   "bw", "basis", "successfactors", "ariba"
 ];
 
-function isSAPJob(text) {
+function isSAPJob(jobText) {
   const t = text.toLowerCase();
   return KEYWORDS.some(k => t.includes(k));
 }
