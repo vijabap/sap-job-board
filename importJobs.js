@@ -116,20 +116,18 @@ async function importJobs() {
 
     // 5️⃣ Insert into Supabase
     for (const job of uniqueJobs) {
-      const { error } = await supabase
-        .from("jobs")
-        .upsert(job, { onConflict: ["id"] });
 
   const { data, error } = await supabase
-  .from("jobs")
-  .upsert(job, { onConflict: ["id"] });
+    .from("jobs")
+    .upsert(job, { onConflict: "id" }); // ⚠️ IMPORTANT FIX
 
-if (error) {
-  console.error("❌ Insert error:", error.message, job);
-} else {
-  console.log("✅ Inserted:", job.title);
+  if (error) {
+    console.error("❌ Insert error:", error.message, job);
+  } else {
+    console.log("✅ Inserted:", job.title);
+  }
+
 }
-    }
 
     console.log("✅ Job import completed successfully");
 
