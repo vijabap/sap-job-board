@@ -16,7 +16,15 @@ const ADZUNA_URL_CA = `https://api.adzuna.com/v1/api/jobs/ca/search/1?app_id=${p
 const REMOTIVE_URL = "https://remotive.com/api/remote-jobs";
 
 // SAP keywords (important for filtering)
-const KEYWORDS = ["sap", "fico", "abap", "hana", "mm", "sd"];
+const KEYWORDS = [
+  "sap", "fico", "abap", "hana", "mm", "sd",
+  "bw", "basis", "successfactors", "ariba"
+];
+
+function isSAPJob(text) {
+  const t = text.toLowerCase();
+  return KEYWORDS.some(k => t.includes(k));
+}
 
 // Clean HTML
 function cleanHTML(html) {
