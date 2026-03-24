@@ -1,50 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>SAP Jobs USA & Canada</title>
+</head>
+
+<body>
+
+<h1>SAP Jobs USA & Canada</h1>
+
+<div id="jobs">Loading jobs...</div>
+
 <script type="module">
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm"
 
-const supabaseUrl = "https://ppgzcywiodxuuxysbnzl.supabase.co"
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI" // ⚠️ must be ANON key (not service key)
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(
+  "https://ppgzcywiodxuuxysbnzl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZ3pjeXdpb2R4dXV4eXNibnpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDk0MDYsImV4cCI6MjA4ODQ4NTQwNn0.pebMyucQZKd3q3ypyeAxeG1ZP34OnXJwI0NVgp63jbI"
+)
 
 async function loadJobs() {
 
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("*")
-    .order("created_at", { ascending: false })
+  try {
 
-  console.log("Jobs from DB:", data)
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("*")
+      .order("created_at", { ascending: false })
 
-  const container = document.getElementById("jobs")
-  container.innerHTML = ""
+    console.log("DATA:", data)
 
-  if (!data || data.length === 0) {
-    container.innerHTML = "<p>No jobs found</p>"
-    return
+    const container = document.getElementById("jobs")
+
+    if (error) {
+      container.innerHTML = "Error loading jobs"
+      console.error(error)
+      return
+    }
+
+    if (!data || data.length === 0) {
+      container.innerHTML = "No jobs found"
+      return
+    }
+
+    container.innerHTML = ""
+
+    data.forEach(job => {
+
+      const div = document.createElement("div")
+
+      div.innerHTML = `
+        <h3>
+          <a href="job.html?id=${job.id}">
+            ${job.title}
+          </a>
+        </h3>
+        <p>${job.company}</p>
+        <p>${job.location}</p>
+        <hr>
+      `
+
+      container.appendChild(div)
+
+    })
+
+  } catch (err) {
+    console.error("JS ERROR:", err)
+    document.getElementById("jobs").innerHTML = "Something went wrong"
   }
 
-  data.forEach(job => {
-
-    const div = document.createElement("div")
-
-    div.innerHTML = `
-      <h3>${job.title}</h3>
-      <p>${job.company}</p>
-      <p>${job.location}</p>
-
-      <a href="job.html?id=${job.id}">
-        <button>View Details</button>
-      </a>
-
-      <hr>
-    `
-
-    container.appendChild(div)
-
-  })
 }
 
 loadJobs()
 
 </script>
+
+</body>
+
+</html>
