@@ -120,7 +120,15 @@ async function importJobs() {
         .from("jobs")
         .upsert(job, { onConflict: ["id"] });
 
-      if (error) console.error("Insert error:", error);
+  const { data, error } = await supabase
+  .from("jobs")
+  .upsert(job, { onConflict: ["id"] });
+
+if (error) {
+  console.error("❌ Insert error:", error.message, job);
+} else {
+  console.log("✅ Inserted:", job.title);
+}
     }
 
     console.log("✅ Job import completed successfully");
