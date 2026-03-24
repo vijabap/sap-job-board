@@ -39,7 +39,7 @@ async function importJobs() {
     await supabase
       .from("jobs")
       .delete()
-      .lt("created_at", cutoff);
+      .neq("id", "0");
 
     console.log("Old jobs deleted");
 
